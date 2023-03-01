@@ -1,8 +1,7 @@
-# vesper-nighthawk
-`vesper_nighthawk` is a Python package that interfaces
-[Vesper](https://github.com/HaroldMills/Vesper) with the
-[Nighthawk](https://github.com/bmvandoren/nighthawk) NFC detector.
+`vesper_nighthawk` is a Python package that adapts the
+[Nighthawk](https://github.com/bmvandoren/nighthawk) NFC detector
+for use with [Vesper](https://github.com/HaroldMills/Vesper).
 
-See [here](https://vesper.readthedocs.io/en/latest/installation.html#installing-nighthawk-optional)
+Please see [here](https://vesper.readthedocs.io/en/latest/installation.html#installing-nighthawk-optional)
 for installation instructions.
 
