@@ -28,7 +28,7 @@ version = "0.0.0"
 authors = [
   { name="Harold Mills", email="harold.mills@gmail.com" },
 ]
-description = "Software for interfacing Vesper with Nighthawk NFC detector."
+description = "Vesper interface for Nighthawk NFC detector."
 readme = "README.md"
 license = {file = "LICENSE.txt"}
 classifiers = [
