@@ -11,19 +11,6 @@ import librosa
 import nighthawk as nh
 
 
-# RESUME:
-# * Ensure that detection start indices are unique.
-
-
-'''
-Add "Interval Bounds Uniqueness Offset" annotation if start and end
-indices were offset to ensure start time uniqueness. Annotation value
-is integer offset that was added. Saving the offset will enable the
-offsets to be undone later if we remove the current clip uniqueness
-constraint.
-'''
-
-    
 def main():
     
     args = parse_args()
