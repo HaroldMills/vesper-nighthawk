@@ -2,11 +2,10 @@
 
 
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 from pathlib import Path
 import csv
 import json
-import sys
 
 import librosa
 import nighthawk as nh
@@ -25,18 +24,6 @@ constraint.
 '''
 
     
-JSON_FILE_HEADER = '''
-{
-    "detections": [
-'''.lstrip()
-
-
-JSON_FILE_TRAILER = '''
-    ]
-}
-'''.lstrip('\n')
-
-
 def main():
     
     args = parse_args()
