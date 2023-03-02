@@ -35,7 +35,7 @@ def main():
     #     merge_overlaps=args.merge_overlaps,
     #     output_dir_path=args.output_dir_path)
 
-    process_detections(args.input_file_path, args.output_dir_path)
+    create_clips_from_detections(args.input_file_path, args.output_dir_path)
 
 
 def parse_args():
@@ -117,7 +117,7 @@ def handle_threshold_error(value):
         f'a number in the range [0, 100].')
 
 
-def process_detections(input_file_path, output_dir_path):
+def create_clips_from_detections(input_file_path, output_dir_path):
 
     sample_rate = librosa.get_samplerate(input_file_path)
     
@@ -127,23 +127,23 @@ def process_detections(input_file_path, output_dir_path):
     else:
         dir_path = output_dir_path
 
-    # Get detector output CSV and Vesper JSON detection file paths.
-    stem = f'{input_file_path.stem}_detections'
-    csv_file_path = dir_path / f'{stem}.csv'
-    json_file_path = dir_path / f'{stem}.json'
+    # Get Nighthawk detection and Vesper clip file paths.
+    stem = f'{input_file_path.stem}'
+    detection_file_path = dir_path / f'{stem}_detections.csv'
+    clip_file_path = dir_path / f'{stem}_clips.json'
 
-    # Get detections from CSV file.
-    with open(csv_file_path, 'r', newline='') as csv_file:
-        reader = csv.DictReader(csv_file)
-        detections = [get_detection_dict(row, sample_rate) for row in reader]
+    # Read Nighthawk detections from CSV file and create Vesper clips.
+    with open(detection_file_path, 'r', newline='') as detection_file:
+        reader = csv.DictReader(detection_file)
+        clips = [get_clip(row, sample_rate) for row in reader]
         
-    # Write detections to JSON file.
-    with open(json_file_path, 'w', newline='') as json_file:
-        output = OrderedDict((('detections', detections),))
-        json.dump(output, json_file, indent=4)
+    # Write clips to JSON file.
+    with open(clip_file_path, 'w', newline='') as clip_file:
+        output = OrderedDict((('clips', clips),))
+        json.dump(output, clip_file, indent=4)
 
 
-def get_detection_dict(row, sample_rate):
+def get_clip(row, sample_rate):
 
     def time_to_index(time):
         return int(round(time * sample_rate))
