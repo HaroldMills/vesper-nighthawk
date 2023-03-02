@@ -15,12 +15,12 @@ def main():
     
     args = parse_args()
     
-    # nh.process_files(
-    #     [args.input_file_path],
-    #     hop_duration=args.hop_duration,
-    #     threshold=args.threshold,
-    #     merge_overlaps=args.merge_overlaps,
-    #     output_dir_path=args.output_dir_path)
+    nh.run_detector_on_files(
+        [args.input_file_path],
+        hop_duration=args.hop_duration,
+        threshold=args.threshold,
+        merge_overlaps=args.merge_overlaps,
+        output_dir_path=args.output_dir_path)
 
     create_clips_from_detections(args.input_file_path, args.output_dir_path)
 
