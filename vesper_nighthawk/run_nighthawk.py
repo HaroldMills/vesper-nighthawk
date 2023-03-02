@@ -13,7 +13,6 @@ import nighthawk as nh
 
 
 # RESUME:
-# * Simplify process_detections.
 # * Ensure that detection start indices are unique.
 
 
@@ -146,49 +145,18 @@ def process_detections(input_file_path, output_dir_path):
     csv_file_path = dir_path / f'{stem}.csv'
     json_file_path = dir_path / f'{stem}.json'
 
-    with open(csv_file_path, 'r', newline='') as csv_file, \
-            open(json_file_path, 'w', newline='') as json_file:
-       
-        def write_line(line):
-            json_file.write(f'        {line}\n')
-
-        csv_reader = csv.DictReader(csv_file)
-
-        json_file.write(JSON_FILE_HEADER)
-
-        # The last JSON line for the previous detection. We keep track
-        # of this so we can add a comma to the last JSON line for every
-        # detection except the last.
-        last_json_line = None
-
-        for row in csv_reader:
-
-            if last_json_line is not None:
-                # this is not the first detection
-
-                # Output the last JSON line for the previous detection,
-                # including a trailing comma.
-                write_line(last_json_line + ',')
-
-            json_text = get_detection_json(row, sample_rate)
-
-            # Output all JSON lines for this detection except for the last.
-            json_lines = json_text.split('\n')
-            for line in json_lines[:-1]:
-                write_line(line)
-
-            # Save the last JSON line for this detection.
-            last_json_line = json_lines[-1]
-
-        # If there were any detections, output the last JSON line for
-        # the last detection with no trailing comma.
-        if last_json_line is not None:
-            write_line(last_json_line)
-
-        json_file.write(JSON_FILE_TRAILER)
+    # Get detections from CSV file.
+    with open(csv_file_path, 'r', newline='') as csv_file:
+        reader = csv.DictReader(csv_file)
+        detections = [get_detection_dict(row, sample_rate) for row in reader]
+        
+    # Write detections to JSON file.
+    with open(json_file_path, 'w', newline='') as json_file:
+        output = OrderedDict((('detections', detections),))
+        json.dump(output, json_file, indent=4)
 
 
-def get_detection_json(row, sample_rate):
+def get_detection_dict(row, sample_rate):
 
     def time_to_index(time):
         return int(round(time * sample_rate))
@@ -212,13 +180,68 @@ def get_detection_json(row, sample_rate):
         ('Nighthawk Species Probability', row['prob_species'])
     ))
 
-    output_detection = OrderedDict((
+    return OrderedDict((
         ('start_index', start_index),
         ('end_index', end_index),
         ('annotations', annotations)
     ))
 
-    return json.dumps(output_detection, indent=4)
+
+def process_detections_old(input_file_path, output_dir_path):
+
+    sample_rate = librosa.get_samplerate(input_file_path)
+    
+    # Get output directory path.
+    if output_dir_path is None:
+        dir_path = input_file_path.parent
+    else:
+        dir_path = output_dir_path
+
+    # Get detector output CSV and Vesper JSON detection file paths.
+    stem = f'{input_file_path.stem}_detections'
+    csv_file_path = dir_path / f'{stem}.csv'
+    json_file_path = dir_path / f'{stem}.json'
+
+    with open(csv_file_path, 'r', newline='') as csv_file, \
+            open(json_file_path, 'w', newline='') as json_file:
+       
+        def write_line(line):
+            json_file.write(f'        {line}\n')
+
+        csv_reader = csv.DictReader(csv_file)
+
+        json_file.write(JSON_FILE_HEADER)
+
+        # The last JSON line for the previous detection. We keep track
+        # of this so we can add a comma to the last JSON line for every
+        # detection except the last.
+        last_json_line = None
+
+        for row in csv_reader:
+
+            # If this isn't the first detection, output the last JSON
+            # line for the previous one, including a trailing comma.
+            if last_json_line is not None:
+                write_line(last_json_line + ',')
+
+            # Get JSON for this detection.
+            detection_dict = get_detection_dict(row, sample_rate)
+            json_text = json.dumps(detection_dict, indent=4)
+
+            # Output all JSON lines except for the last.
+            json_lines = json_text.split('\n')
+            for line in json_lines[:-1]:
+                write_line(line)
+
+            # Save the last JSON line.
+            last_json_line = json_lines[-1]
+
+        # If there were any detections, output the last JSON line for
+        # the last detection with no trailing comma.
+        if last_json_line is not None:
+            write_line(last_json_line)
+
+        json_file.write(JSON_FILE_TRAILER)
 
 
 if __name__ == '__main__':
