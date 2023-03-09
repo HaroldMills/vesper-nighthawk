@@ -1,21 +1,21 @@
-# TOML file for building tne `vesper-nighthawk` package.
+# TOML file for building the `vesper-nighthawk` package.
 #
 # This file is modeled after a similar file in the Python packaging
 # tutorial at
 # https://packaging.python.org/en/latest/tutorials/packaging-projects/.
 #
-# To create a Python environment named `vesper-nighthawk-latest` in which
+# To create a Python environment named `vesper-nighthawk-dev` in which
 # to work on the `vesper-nighthawk` package:
 #
-#     conda create -n vesper-nighthawk-latest python=3.10
-#     conda activate vesper-nighthawk-latest
+#     conda create -n vesper-nighthawk-dev python=3.10
+#     conda activate vesper-nighthawk-dev
 #     pip install -e <nighthawk package dir path>
 #     pip install -e <vesper-nighthawk package dir path>
 #
 # To build the `vesper-nighthawk` package, issue the following commands
 # from within the directory containing this TOML file:
 #
-#     conda activate vesper-nighthawk-latest
+#     conda activate vesper-nighthawk-dev
 #     python -m build
 
 [build-system]
@@ -30,18 +30,20 @@ authors = [
 ]
 description = "Adapter for using the Nighthawk NFC detector with Vesper."
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 requires-python = "~=3.10.0"
-dependencies = []
+dependencies = [
+    "numpy"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/haroldmills/vesper-nighthawk"
 "Bug Tracker" = "https://github.com/haroldmills/vesper-nighthawk/issues"
 
-[project.scripts]
-run_nighthawk = "vesper_nighthawk.run_nighthawk:main"
+[project.entry-points.'vesper.detector_providers']
+vesper_nighthawk = 'vesper_nighthawk'
