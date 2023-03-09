@@ -444,10 +444,13 @@ def _get_clip(row, sample_rate, start_indices):
     
     length = end_index - start_index
 
+    classification = 'Call.' + row['class']
+    score = str(100 * float(row['prob']))
+
     annotations = OrderedDict((
-        ('Detector Score', 100 * row['prob']),
-        ('Classification', 'Call.' + row['class']),
-        ('Classifier Score', 100 * row['prob']),
+        ('Detector Score', score),
+        ('Classification', classification),
+        ('Classifier Score', score),
         ('Nighthawk Class', row['class']),
         ('Nighthawk Class Probability', row['prob']),
         ('Nighthawk Order', row['order']),
