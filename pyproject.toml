@@ -1,22 +1,32 @@
-# TOML file for building the `vesper-nighthawk` package.
-#
-# This file is modeled after a similar file in the Python packaging
-# tutorial at
-# https://packaging.python.org/en/latest/tutorials/packaging-projects/.
+# pyproject.toml for `vesper-nighthawk` pip package.
 #
 # To create a Python environment named `vesper-nighthawk-dev` in which
 # to work on the `vesper-nighthawk` package:
 #
 #     conda create -n vesper-nighthawk-dev python=3.10
 #     conda activate vesper-nighthawk-dev
-#     pip install -e <nighthawk package dir path>
 #     pip install -e <vesper-nighthawk package dir path>
+#     pip install build twine
 #
 # To build the `vesper-nighthawk` package, issue the following commands
-# from within the directory containing this TOML file:
+# from within the directory containing this file:
 #
 #     conda activate vesper-nighthawk-dev
 #     python -m build
+#
+# The build process will write package `.tar.gz` and `.whl` files to the
+# `dist` subdirectory of the directory containing this file.
+#
+# To upload a built package to the test Python package index:
+#
+#     conda activate vesper-nighthawk-dev
+#     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+#
+# To upload a built package to the real Python package index:
+#
+#     conda activate vesper-nighthawk-dev
+#     python -m twine upload dist/*
+
 
 [build-system]
 requires = ["hatchling"]
@@ -24,26 +34,26 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vesper-nighthawk"
-version = "0.0.0"
-authors = [
-  { name="Harold Mills", email="harold.mills@gmail.com" },
-]
+version = "0.0.0a0"
 description = "Adapter for using the Nighthawk NFC detector with Vesper."
 readme = "README.md"
+requires-python = "~=3.10.0"
 license = {file = "LICENSE"}
+authors = [
+    {name = "Harold Mills", email = "harold.mills@gmail.com"},
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-requires-python = "~=3.10.0"
 dependencies = [
     "numpy"
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/haroldmills/vesper-nighthawk"
 "Bug Tracker" = "https://github.com/haroldmills/vesper-nighthawk/issues"
+"Source Code" = "https://github.com/haroldmills/vesper-nighthawk"
 
 [project.entry-points.'vesper.detector_providers']
 vesper_nighthawk = 'vesper_nighthawk'
