@@ -6,7 +6,7 @@
 #     conda create -n vesper-nighthawk-dev python=3.10
 #     conda activate vesper-nighthawk-dev
 #     pip install -e <vesper-nighthawk package dir path>
-#     pip install build twine
+#     pip install build pytest twine
 #
 # To build the `vesper-nighthawk` package, issue the following commands
 # from within the directory containing this file:
