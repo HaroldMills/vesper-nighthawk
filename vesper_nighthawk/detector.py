@@ -25,17 +25,43 @@ import vesper_nighthawk.conda_utils as conda_utils
 
 _SUPPORTED_DETECTOR_SERIES_NAMES = ('Nighthawk',)
 
-_SETTING_EXPANSIONS = {
-    'MO': ('merge_overlaps', True),
-    'NMO': ('merge_overlaps', False),
-    'DU': ('drop_uncertain', True),
-    'NDU': ('drop_uncertain', False)
+
+def _parse_hop_size(value):
+    
+    try:
+        hop = float(value)
+    except Exception:
+        _handle_hop_size_error(value)
+
+    if hop <= 0 or hop > 100:
+        _handle_hop_size_error(value)
+    
+    return hop
+
+
+def _handle_hop_size_error(value):
+    raise _SettingError(
+        f'Bad hop size "{value}". Hop size must be a number in the '
+        f'range (0, 100].')
+
+
+_SETTING_INFO = {
+    'H': {'name': 'hop_size', 'value_parser': _parse_hop_size},
+    'MO': {'name': 'merge_overlaps', 'value': True},
+    'NMO': {'name': 'merge_overlaps', 'value': False},
+    'DU': {'name': 'drop_uncertain', 'value': True},
+    'NDU': {'name': 'drop_uncertain', 'value': False}
 }
 
 
 '''
-Example detector name: "Nighthawk 0.1.0 90 20.1 NMO DU"
-Corresponding detector class name: "Nighthawk_0x1x0_90_20x1_NMO_DU"
+Examples of detector names in Vesper:
+    Nighthawk 0.1.0 50
+    Nighthawk 0.1.0 90
+    Nighthawk 0.1.0 90 H 20.1
+    Nighthawk 0.1.0 90 H 20.1 NMO DU
+
+Detector class name for last example: Nighthawk_0x1x0_90_H_20x1_NMO_DU
 '''
 
 
@@ -79,22 +105,48 @@ def parse_detector_settings(series_name, version_number, settings):
     automatically generate detector setting user interfaces.
     """
 
-    if len(settings) == 0:
+    setting_count = len(settings)
+
+    if setting_count == 0:
         raise _SettingError('No threshold specified.')
     
     threshold = _parse_threshold(settings[0])
+    result = {'threshold': threshold}
 
-    other_settings = [_parse_setting(s) for s in settings[1:]]
+    i = 1
 
-    hop_index = _get_hop_index(other_settings)
+    while i != setting_count:
 
-    if hop_index is not None and hop_index != 0:
-        hop_text = settings[1 + hop_index]
-        raise _SettingError(
-            f'Hop size "{hop_text}" specified out of place. Hop size '
-            f'must immediately follow threshold.')
-    
-    return dict([('threshold', threshold)] + other_settings)
+        code = settings[i]
+
+        info = _SETTING_INFO.get(code)
+
+        if info is None:
+            raise _SettingError(
+                f'Unrecognized detector setting name "{code}".')
+        
+        name = info['name']
+        
+        value_parser = info.get('value_parser')
+
+        if value_parser is None:
+            # setting value fixed
+
+            result[name] = info['value']
+            i += 1
+
+        else:
+            # setting value not fixed
+
+            if i == setting_count - 1:
+                raise _SettingError(
+                    f'No setting value after name "{code}" that requires one.')
+            
+            value = value_parser(settings[i + 1])
+            result[name] = value
+            i += 2
+
+    return result
 
 
 def _parse_threshold(value):
@@ -114,53 +166,6 @@ def _handle_threshold_error(value):
     raise _SettingError(
         f'Bad threshold "{value}". Threshold must be a number in the '
         f'range [0, 100].')
-    
-
-def _parse_setting(s):
-    
-    try:
-        _ = float(s)
-
-    except Exception:
-        # setting value is not a number
-
-        try:
-            return _SETTING_EXPANSIONS[s]
-        
-        except KeyError:
-            raise _SettingError(f'Unrecognized detector setting value "{s}".')
-        
-    else:
-        # setting value is a number
-        
-        hop_size = _parse_hop_size(s)
-        return ('hop_size', hop_size)
-            
-
-def _parse_hop_size(value):
-    
-    try:
-        hop = float(value)
-    except Exception:
-        _handle_hop_size_error(value)
-
-    if hop <= 0 or hop > 100:
-        _handle_hop_size_error(value)
-    
-    return hop
-
-
-def _handle_hop_size_error(value):
-    raise _SettingError(
-        f'Bad hop size "{value}". Hop size must be a number in the '
-        f'range (0, 100].')
-
-
-def _get_hop_index(settings):
-    for i, (name, _) in enumerate(settings):
-        if name == 'hop_size':
-            return i
-    return None
 
 
 def get_detector_class(extension_name, series_name, version_number, settings):
@@ -187,7 +192,7 @@ def get_detector_class(extension_name, series_name, version_number, settings):
 def _get_class_name(series_name, version_number, settings):
 
     threshold = _format_number(settings.get('threshold'))
-    hop_size = _format_number(settings.get('hop_size'))
+    hop_size = _format_number(settings.get('hop_size'), 'H')
     merge_overlaps = _format_boolean(settings.get('merge_overlaps'), 'MO')
     drop_uncertain = _format_boolean(settings.get('drop_uncertain'), 'DU')
 
@@ -196,11 +201,13 @@ def _get_class_name(series_name, version_number, settings):
         f'{merge_overlaps}{drop_uncertain}').replace('.', 'x')
 
 
-def _format_number(x):
+def _format_number(x, code=None):
     if x is None:
         return ''
-    else:
+    elif code is None:
         return f'_{x}'
+    else:
+        return f'_{code}_{x}'
     
 
 def _format_boolean(x, code):
