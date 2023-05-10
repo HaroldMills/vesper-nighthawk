@@ -34,8 +34,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vesper-nighthawk"
-version = "0.0.0"
-description = "Adapter for using the Nighthawk NFC detector with Vesper."
+version = "1.0.0"
+description = "Nighthawk NFC detector plugin for Vesper."
 readme = "README.md"
 requires-python = "~=3.10.0"
 license = {file = "LICENSE"}
