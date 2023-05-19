@@ -406,15 +406,22 @@ class _Detector:
         
         start_indices = set()
 
-        with open(file_path, newline='') as file_:
+        with open(file_path, newline='') as csv_file, \
+                open(file_path, newline='') as text_file:
             
-            reader = csv.DictReader(file_)
+            reader = csv.DictReader(csv_file)
+
+            # Skip header.
+            text_file.readline()
             
             for row in reader:
 
+                # Get file line from which `row` was created.
+                line = text_file.readline().strip()
+
                 try:
-                    start_index, length, annotations = \
-                        _get_clip(row, self._input_sample_rate, start_indices)
+                    start_index, length, annotations = _get_clip(
+                        row, self._input_sample_rate, start_indices, line)
                     
                 except Exception as e:
                     logging.warning(f'{e}. Clip will be ignored.')
@@ -426,7 +433,7 @@ class _Detector:
         self._listener.complete_processing()
 
 
-def _get_clip(row, sample_rate, start_indices):
+def _get_clip(row, sample_rate, start_indices, line):
 
     unincremented_start_index = \
         _time_to_index(float(row['start_sec']), sample_rate)
@@ -458,8 +465,6 @@ def _get_clip(row, sample_rate, start_indices):
         ('Detector Score', score),
         ('Classification', classification),
         ('Classifier Score', score),
-        ('Nighthawk Predicted Category', row['predicted_category']),
-        ('Nighthawk Predicted Probability', row['prob']),
         ('Nighthawk Order', row['order']),
         ('Nighthawk Order Probability', row['prob_order']),
         ('Nighthawk Family', row['family']),
@@ -467,7 +472,10 @@ def _get_clip(row, sample_rate, start_indices):
         ('Nighthawk Group', row['group']),
         ('Nighthawk Group Probability', row['prob_group']),
         ('Nighthawk Species', row['species']),
-        ('Nighthawk Species Probability', row['prob_species'])
+        ('Nighthawk Species Probability', row['prob_species']),
+        ('Nighthawk Predicted Category', row['predicted_category']),
+        ('Nighthawk Probability', row['prob']),
+        ('Nighthawk Output File Line', line),
     ))
 
     if start_index != unincremented_start_index:
