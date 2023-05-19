@@ -2,6 +2,6 @@
 [Nighthawk](https://github.com/bmvandoren/Nighthawk) NFC detector
 with [Vesper](https://github.com/HaroldMills/Vesper).
 
-Please see [here](https://vesper.readthedocs.io/en/latest/installation.html#installing-nighthawk-optional)
+Please see the [Vesper documentation](https://vesper.readthedocs.io/en/latest/installation.html#installing-nighthawk-optional)
 for installation instructions.
 
