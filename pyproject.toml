@@ -6,7 +6,7 @@
 #     conda create -n vesper-nighthawk-dev python=3.10
 #     conda activate vesper-nighthawk-dev
 #     pip install -e <vesper-nighthawk package dir path>
-#     pip install build pytest twine
+#     pip install pandas build pytest twine
 #
 # To build the `vesper-nighthawk` package, issue the following commands
 # from within the directory containing this file:
@@ -29,31 +29,31 @@
 
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ['hatchling']
+build-backend = 'hatchling.build'
 
 [project]
-name = "vesper-nighthawk"
-version = "1.0.0"
-description = "Nighthawk NFC detector plugin for Vesper."
-readme = "README.md"
-requires-python = "~=3.10.0"
-license = {file = "LICENSE"}
+name = 'vesper-nighthawk'
+version = '1.0.0'
+description = 'Nighthawk NFC detector plugin for Vesper.'
+readme = 'README.md'
+requires-python = '~=3.10.0'
+license = {file = 'LICENSE'}
 authors = [
-    {name = "Harold Mills", email = "harold.mills@gmail.com"},
+    {name = 'Harold Mills', email = 'harold.mills@gmail.com'},
 ]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
 ]
 dependencies = [
-    "numpy"
+    'numpy'
 ]
 
 [project.urls]
-"Bug Tracker" = "https://github.com/haroldmills/vesper-nighthawk/issues"
-"Source Code" = "https://github.com/haroldmills/vesper-nighthawk"
+'Bug Tracker' = 'https://github.com/haroldmills/vesper-nighthawk/issues'
+'Source Code' = 'https://github.com/haroldmills/vesper-nighthawk'
 
 [project.entry-points.'vesper.detector_providers']
 vesper_nighthawk = 'vesper_nighthawk'
