@@ -5,6 +5,7 @@ from collections import OrderedDict
 from contextlib import AbstractContextManager
 from pathlib import Path
 import csv
+import json
 import logging
 import tempfile
 import wave
@@ -45,23 +46,32 @@ def _handle_hop_size_error(value):
         f'range (0, 100].')
 
 
-_SETTING_INFO = {
-    'H': {'name': 'hop_size', 'value_parser': _parse_hop_size},
-    'MO': {'name': 'merge_overlaps', 'value': True},
-    'NMO': {'name': 'merge_overlaps', 'value': False},
-    'DU': {'name': 'drop_uncertain', 'value': True},
-    'NDU': {'name': 'drop_uncertain', 'value': False}
+_NIGHTHAWK_SETTING_INFO = {
+    'hs': {'name': 'hop_size', 'value_parser': _parse_hop_size},
+    'mo': {'name': 'merge_overlaps', 'value': True},
+    'nmo': {'name': 'merge_overlaps', 'value': False},
+    'du': {'name': 'drop_uncertain', 'value': True},
+    'ndu': {'name': 'drop_uncertain', 'value': False},
 }
+
+_SPECIES_CODE_TYPE_EBIRD = 'ebird'
+_SPECIES_CODE_TYPE_IBP = 'ibp'
+_SPECIES_CODE_TYPES = frozenset((
+    _SPECIES_CODE_TYPE_EBIRD, _SPECIES_CODE_TYPE_IBP
+))
+_DATA_DIR_PATH = Path(__file__).parent / 'data'
+_SPECIES_CODE_MAPPING_FILE_PATH = _DATA_DIR_PATH / 'species_code_mapping.json'
 
 
 '''
 Examples of detector names in Vesper:
-    Nighthawk 0.1.0 50
+    Nighthawk 0.1.0 80
     Nighthawk 0.1.0 90
-    Nighthawk 0.1.0 90 H 20.1
-    Nighthawk 0.1.0 90 H 20.1 NMO DU
+    Nighthawk 0.1.0 90 ibp
+    Nighthawk 0.1.0 90 hs 20.1
+    Nighthawk 0.1.0 90 hs 20.1 nmo du
 
-Detector class name for last example: Nighthawk_0x1x0_90_H_20x1_NMO_DU
+Detector class name for last example: Nighthawk_0x1x0_90_hs_20x1_nmo_du
 '''
 
 
@@ -119,32 +129,39 @@ def parse_detector_settings(series_name, version_number, settings):
 
         code = settings[i]
 
-        info = _SETTING_INFO.get(code)
-
-        if info is None:
-            raise _SettingError(
-                f'Unrecognized detector setting name "{code}".')
-        
-        name = info['name']
-        
-        value_parser = info.get('value_parser')
-
-        if value_parser is None:
-            # setting value fixed
-
-            result[name] = info['value']
+        if code in _SPECIES_CODE_TYPES:
+            result['species_code_type'] = code
             i += 1
 
         else:
-            # setting value not fixed
 
-            if i == setting_count - 1:
+            info = _NIGHTHAWK_SETTING_INFO.get(code)
+
+            if info is None:
                 raise _SettingError(
-                    f'No setting value after name "{code}" that requires one.')
+                    f'Unrecognized detector setting name "{code}".')
             
-            value = value_parser(settings[i + 1])
-            result[name] = value
-            i += 2
+            name = info['name']
+            
+            value_parser = info.get('value_parser')
+
+            if value_parser is None:
+                # setting value fixed
+
+                result[name] = info['value']
+                i += 1
+
+            else:
+                # setting value not fixed
+
+                if i == setting_count - 1:
+                    raise _SettingError(
+                        f'No setting value after name "{code}" that '
+                        f'requires one.')
+                
+                value = value_parser(settings[i + 1])
+                result[name] = value
+                i += 2
 
     return result
 
@@ -192,13 +209,15 @@ def get_detector_class(extension_name, series_name, version_number, settings):
 def _get_class_name(series_name, version_number, settings):
 
     threshold = _format_number(settings.get('threshold'))
-    hop_size = _format_number(settings.get('hop_size'), 'H')
-    merge_overlaps = _format_boolean(settings.get('merge_overlaps'), 'MO')
-    drop_uncertain = _format_boolean(settings.get('drop_uncertain'), 'DU')
+    hop_size = _format_number(settings.get('hop_size'), 'hs')
+    merge_overlaps = _format_boolean(settings.get('merge_overlaps'), 'mo')
+    drop_uncertain = _format_boolean(settings.get('drop_uncertain'), 'du')
+    species_code_type = _format_enum(settings.get('species_code_type'))
 
     return (
         f'{series_name}_{version_number}{threshold}{hop_size}'
-        f'{merge_overlaps}{drop_uncertain}').replace('.', 'x')
+        f'{merge_overlaps}{drop_uncertain}'
+        f'{species_code_type}').replace('.', 'x')
 
 
 def _format_number(x, code=None):
@@ -216,8 +235,15 @@ def _format_boolean(x, code):
     elif x:
         return f'_{code}'
     else:
-        return f'_N{code}'
+        return f'_n{code}'
 
+
+def _format_enum(x):
+    if x is None:
+        return ''
+    else:
+        return f'_{x}'
+    
 
 class _Detector:
     
@@ -255,8 +281,22 @@ class _Detector:
         # Create detector input audio file writer.
         self._input_file_writer = _WaveFileWriter(
             self._input_file, 1, self._input_sample_rate)
-    
-    
+        
+        self._taxon_mapping = self._get_taxon_mapping()
+        
+
+    def _get_taxon_mapping(self):
+
+        species_code_type = self.settings.get('species_code_type')
+
+        if species_code_type == _SPECIES_CODE_TYPE_IBP:
+            with open(_SPECIES_CODE_MAPPING_FILE_PATH) as file:
+                return json.load(file)
+            
+        else:
+            return {}
+        
+
     @property
     def settings(self):
         return self._settings
@@ -420,7 +460,7 @@ class _Detector:
                 line = text_file.readline().strip()
 
                 try:
-                    start_index, length, annotations = _get_clip(
+                    start_index, length, annotations = self._get_clip(
                         row, self._input_sample_rate, start_indices, line)
                     
                 except Exception as e:
@@ -433,58 +473,65 @@ class _Detector:
         self._listener.complete_processing()
 
 
-def _get_clip(row, sample_rate, start_indices, line):
+    def _get_clip(self, row, sample_rate, start_indices, line):
 
-    unincremented_start_index = \
-        _time_to_index(float(row['start_sec']), sample_rate)
+        unincremented_start_index = \
+            _time_to_index(float(row['start_sec']), sample_rate)
 
-    start_index = _make_start_index_unique(
-        unincremented_start_index, start_indices)
+        start_index = _make_start_index_unique(
+            unincremented_start_index, start_indices)
 
-    # We never increment the end index of a clip, even if we increment
-    # the start index, since that could push the end index past the end
-    # of the input. So incrementing the start index shortens a clip.
-    end_index = _time_to_index(float(row['end_sec']), sample_rate)
+        # We never increment the end index of a clip, even if we increment
+        # the start index, since that could push the end index past the end
+        # of the input. So incrementing the start index shortens a clip.
+        end_index = _time_to_index(float(row['end_sec']), sample_rate)
 
-    # It would be extremely surprising if incrementing the start index
-    # moved it past the end index, since a clip usually has thousands
-    # of samples, but we check for that anyway, just to be sure.
-    if start_index > end_index:
-        start_time = row['start_sec']
-        raise _DetectorError(
-            f'For clip starting {start_time} seconds into recording file, '
-            f'incrementing start index to make it unique moved it past '
-            f'end index.')
+        # It would be extremely surprising if incrementing the start index
+        # moved it past the end index, since a clip usually has thousands
+        # of samples, but we check for that anyway, just to be sure.
+        if start_index > end_index:
+            start_time = row['start_sec']
+            raise _DetectorError(
+                f'For clip starting {start_time} seconds into recording '
+                f'file, incrementing start index to make it unique moved '
+                f'it past end index.')
+        
+        length = end_index - start_index
+
+        species = self._map_taxon(row['species'])
+        predicted_category = self._map_taxon(row['predicted_category'])
+
+        classification = 'Call.' + predicted_category
+        score = str(100 * float(row['prob']))
+
+        annotations = OrderedDict((
+            ('Detector Score', score),
+            ('Classification', classification),
+            ('Classifier Score', score),
+            ('Nighthawk Order', row['order']),
+            ('Nighthawk Order Probability', row['prob_order']),
+            ('Nighthawk Family', row['family']),
+            ('Nighthawk Family Probability', row['prob_family']),
+            ('Nighthawk Group', row['group']),
+            ('Nighthawk Group Probability', row['prob_group']),
+            ('Nighthawk Species', species),
+            ('Nighthawk Species Probability', row['prob_species']),
+            ('Nighthawk Predicted Category', predicted_category),
+            ('Nighthawk Probability', row['prob']),
+            ('Nighthawk Output File Line', line),
+        ))
+
+        if start_index != unincremented_start_index:
+            # start index was incremented
+
+            offset = start_index - unincremented_start_index
+            annotations['Start Index Uniqueness Offset'] = str(offset)
+
+        return start_index, length, annotations
     
-    length = end_index - start_index
 
-    classification = 'Call.' + row['predicted_category']
-    score = str(100 * float(row['prob']))
-
-    annotations = OrderedDict((
-        ('Detector Score', score),
-        ('Classification', classification),
-        ('Classifier Score', score),
-        ('Nighthawk Order', row['order']),
-        ('Nighthawk Order Probability', row['prob_order']),
-        ('Nighthawk Family', row['family']),
-        ('Nighthawk Family Probability', row['prob_family']),
-        ('Nighthawk Group', row['group']),
-        ('Nighthawk Group Probability', row['prob_group']),
-        ('Nighthawk Species', row['species']),
-        ('Nighthawk Species Probability', row['prob_species']),
-        ('Nighthawk Predicted Category', row['predicted_category']),
-        ('Nighthawk Probability', row['prob']),
-        ('Nighthawk Output File Line', line),
-    ))
-
-    if start_index != unincremented_start_index:
-        # start index was incremented
-
-        offset = start_index - unincremented_start_index
-        annotations['Start Index Uniqueness Offset'] = str(offset)
-
-    return start_index, length, annotations
+    def _map_taxon(self, taxon):
+        return self._taxon_mapping.get(taxon, taxon)
 
 
 def _time_to_index(time, sample_rate):
